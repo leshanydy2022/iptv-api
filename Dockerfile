@@ -8,7 +8,7 @@ WORKDIR /app
 
 COPY Pipfile* ./
 
-RUN apk update && apk add --no-cache gcc musl-dev python3-dev libffi-dev zlib-dev jpeg-dev wget make libc-dev pcre-dev openssl-dev \
+RUN apk update && apk add --no-cache gcc musl-dev python3-dev libffi-dev zlib-dev jpeg-dev wget make pcre-dev openssl-dev \
   && pip install pipenv \
   && PIPENV_VENV_IN_PROJECT=1 pipenv install --deploy \
   && if [ "$LITE" = False ]; then pipenv install selenium; fi
@@ -20,11 +20,14 @@ RUN wget https://github.com/arut/nginx-rtmp-module/archive/v${RTMP_VER}.tar.gz &
     tar xzf v${RTMP_VER}.tar.gz
 
 WORKDIR /app/nginx-${NGINX_VER}
-RUN ./configure --with-http_ssl_module \
+RUN ./configure \
+    --add-module=/app/nginx-rtmp-module-${RTMP_VER} \
+    --with-http_ssl_module \
+    --with-http_v2_module \
     --conf-path=/etc/nginx/nginx.conf \
     --error-log-path=/var/log/nginx/error.log \
     --http-log-path=/var/log/nginx/access.log \
-    --add-module=/app/nginx-rtmp-module-${RTMP_VER} \
+    --with-pcre \
     --with-debug && \
     make && \
     make install
@@ -37,7 +40,7 @@ ARG LITE=False
 ENV APP_WORKDIR=$APP_WORKDIR
 ENV LITE=$LITE
 ENV APP_PORT=8000
-ENV PATH="/.venv/bin:$PATH"
+ENV PATH="/.venv/bin:/usr/local/nginx/sbin:$PATH"
 ENV UPDATE_CRON="0 22,10 * * *"
 
 WORKDIR $APP_WORKDIR
